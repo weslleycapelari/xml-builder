@@ -10,6 +10,7 @@ type
     function AddNode(const ANode: IXmlNode): IXmlNode;
     function AddElement(const AName: string): IXmlNode; overload;
     function AddElement(const AName, AValue: string): IXmlNode; overload;
+    function NodeName: string;
   end;
 
 implementation

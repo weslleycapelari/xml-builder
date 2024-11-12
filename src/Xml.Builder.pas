@@ -33,6 +33,7 @@ type
     procedure SaveToFile(const APath: string; const APretty: Boolean = False; const ASpaces: Integer = 2);
     constructor Create;
   public
+    class function Parse(const AText: string): IXMLBuilder;
     class function New: IXmlBuilder;
     class function Adapter(const ADataSet: TDataSet): IXmlBuilder;
   end;
@@ -95,6 +96,39 @@ end;
 class function TXmlBuilder.New: IXmlBuilder;
 begin
   Result := TXmlBuilder.Create;
+end;
+
+class function TXmlBuilder.Parse(const AText: string): IXMLBuilder;
+var
+  LXML: string;
+  LStart: Int64;
+  LLength: Int64;
+  LContent: string;
+begin
+  Result := TXmlBuilder.New;
+  LStart := Pos('<?xml', AText);
+  if (LStart > 0) then
+  begin
+    LLength := Pos('?>', AText, LStart) - LStart + 2;
+    LXML := Copy(AText, LStart, LLength);
+    LStart := Pos('version', LXML);
+    if (LStart > 0) then
+    begin
+      Inc(LStart, 9);
+      LLength := Pos('"', LXML, LStart) - LStart;
+      Result.Version(Copy(LXML, LStart, LLength));
+    end;
+    LStart := Pos('encoding', LXML);
+    if (LStart > 0) then
+    begin
+      Inc(LStart, 10);
+      LLength := Pos('"', LXML, LStart) - LStart;
+      Result.Encoding(Copy(LXML, LStart, LLength));
+    end;
+  end;
+  LContent := AText.Replace(LXML, '', [rfIgnoreCase]);
+  if (LContent.Trim.IsEmpty) then Exit;
+  Result.AddNode(TXmlNode.Parse(LContent));
 end;
 
 procedure TXmlBuilder.SaveToFile(const APath: string; const APretty: Boolean; const ASpaces: Integer);

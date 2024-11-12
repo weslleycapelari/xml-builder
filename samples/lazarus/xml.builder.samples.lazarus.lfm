@@ -45,6 +45,15 @@ object FrmSamples: TFrmSamples
     TabOrder = 3
     OnClick = btnExample3Click
   end
+  object btnExample4: TButton
+    Left = 268
+    Height = 25
+    Top = 16
+    Width = 75
+    Caption = 'Example 4'
+    TabOrder = 4
+    OnClick = btnExample4Click
+  end
   object mtDeveloper: TMemDataset
     FieldDefs = <    
       item

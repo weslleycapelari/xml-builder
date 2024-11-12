@@ -28,8 +28,10 @@ type
     function AddNode(const ANode: IXmlNode): IXmlNode;
     function AddElement(const AName: string): IXmlNode; overload;
     function AddElement(const AName, AValue: string): IXmlNode; overload;
+    function NodeName: string;
     constructor Create(const ANodeName: string); reintroduce;
   public
+    class function Parse(const AText: string): IXmlNode;
     class function New(const ANodeName: string): IXmlNode;
     destructor Destroy; override;
   end;
@@ -138,6 +140,93 @@ end;
 class function TXmlNode.New(const ANodeName: string): IXmlNode;
 begin
   Result := TXmlNode.Create(ANodeName);
+end;
+
+function TXmlNode.NodeName: string;
+begin
+  Result := FNodeName;
+end;
+
+class function TXmlNode.Parse(const AText: string): IXmlNode;
+var
+  LTag: string;
+  LLevel: Int64;
+  LStart: Int64;
+  LLength: Int64;
+  LIsNode: Boolean;
+  LTagName: string;
+  LContent: string;
+  LOpenTag: string;
+  LCloseTag: string;
+  LAttrName: string;
+  LAttrValue: string;
+  LStartContent: Int64;
+  LStartElement: Int64;
+begin
+  LStart := Pos('<', AText);
+  if (LStart = 0) then Exit;
+  LLength := Pos('>', AText, LStart) - LStart + 1;
+  LTag := Copy(AText, LStart, LLength);
+  if (LTag.Contains(' ')) then
+    LLength := Pos(' ', LTag);
+  LTagName := Copy(LTag, 2, LLength - 2);
+  Result := TXmlNode.New(LTagName);
+  LStart := 1;
+  while LStart > 0 do
+  begin
+    LStart := Pos(' ', LTag, LStart);
+    if LStart = 0 then Break;
+    Inc(LStart);
+    LLength := Pos('=', LTag, LStart) - LStart;
+    LAttrName := Copy(LTag, LStart, LLength);
+    LAttrValue := '';
+    LStart := Pos('"', LTag, LStart + LLength) + 1;
+    if (LStart > 0) then
+    begin
+      LLength := Pos('"', LTag, LStart) - LStart;
+      LAttrValue := Copy(LTag, LStart, LLength);
+    end;
+    Result.AddAttribute(LAttrName, LAttrValue);
+  end;
+  if LTag.EndsWith('/>') then Exit;
+  LStartElement := 0;
+  LStartContent := Pos(LTag, AText) + Length(LTag);
+  LIsNode := False;
+  LLevel := 0;
+  LStart := 1;
+  LLength := 0;
+  while LStart > 0 do
+  begin
+    LStart := Pos('<', AText, LStart + LLength);
+    if LStart = 0 then Break;
+    LLength := Pos('>', AText, LStart) - LStart + 1;
+    LTag := Copy(AText, LStart, LLength);
+    if (LTag = LCloseTag) and (LLevel = 2) then
+    begin
+      if LIsNode then
+        Result.AddNode(TXmlNode.Parse(LOpenTag + Copy(AText, LStartElement, LStart - LStartElement).Trim + LCloseTag))
+      else
+        Result.AddElement(LTagName, Copy(AText, LStartElement, LStart - LStartElement));
+    end;
+    if (LTag.Contains(' ')) then
+      LLength := Pos(' ', LTag);
+    LTagName := Copy(LTag, 2, LLength - 2);
+    if (LTag.EndsWith('/>')) then
+    begin
+      Result.AddElement(Copy(LTagName, 1, Length(LTagName) - 1));
+      Continue;
+    end;
+    LIsNode := LLevel > 2;
+    if LLevel = 1 then
+    begin
+      LOpenTag := LTag;
+      LCloseTag := '</' + LTagName + '>';
+    end;
+    if (LTag.StartsWith('</')) then Dec(LLevel) else Inc(LLevel);
+    if (LTag.StartsWith('</' + Result.NodeName)) and (LLevel = 0) then Break;
+    if (LLevel = 2) and (not LIsNode) then LStartElement := LStart + Length(LTag);
+  end;
+  LContent := Copy(AText, LStartContent, LStart - LStartContent);
 end;
 
 function TXmlNode.SpaceLines(const AText: string; const ASpaces: Integer): string;
