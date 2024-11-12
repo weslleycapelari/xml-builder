@@ -8,11 +8,11 @@ uses
 type
   IXmlBuilder = interface
     ['{37DA336E-B602-4985-A05A-4833D3FAF951}']
-    function Xml: string;
+    function Xml(const APretty: Boolean = False; const ASpaces: Integer = 2): string;
     function Version(const AValue: string): IXmlBuilder;
     function Encoding(const AValue: string): IXmlBuilder;
     function AddNode(const ANode: IXmlNode): IXMlBuilder;
-    procedure SaveToFile(const APath: string);
+    procedure SaveToFile(const APath: string; const APretty: Boolean = False; const ASpaces: Integer = 2);
   end;
 
 implementation

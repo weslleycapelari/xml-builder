@@ -37,6 +37,12 @@ object FrmSamples: TFrmSamples
       Top = 56
       Width = 649
       Height = 377
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Consolas'
+      Font.Style = []
+      ParentFont = False
       TabOrder = 1
     end
     object btnExample2: TButton

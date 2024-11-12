@@ -5,7 +5,7 @@ interface
 type
   IXmlNode = interface
     ['{83EC1878-082C-475D-9E9B-F158BDCA6E07}']
-    function Build: string;
+    function Build(const APretty: Boolean = False; const ASpaces: Integer = 2): string;
     function AddAttribute(const AName, AValue: string): IXmlNode;
     function AddNode(const ANode: IXmlNode): IXmlNode;
     function AddElement(const AName: string): IXmlNode; overload;

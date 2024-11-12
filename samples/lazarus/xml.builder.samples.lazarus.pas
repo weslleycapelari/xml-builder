@@ -44,7 +44,7 @@ begin
         .AddElement('RESTRequest4Delphi', 'yes')
         .AddElement('DataSet-Serialize', 'yes')
         .AddElement('BCrypt', 'yes')))
-    .Xml;
+    .Xml(True);
 end;
 
 procedure TFrmSamples.btnExample2Click(Sender: TObject);
@@ -67,7 +67,7 @@ begin
 
   mmXml.Lines.Text := TXmlBuilder.New
     .AddNode(LDeveloperNode)
-    .Xml;
+    .Xml(True);
 end;
 
 procedure TFrmSamples.btnExample3Click(Sender: TObject);

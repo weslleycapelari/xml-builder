@@ -45,7 +45,7 @@ begin
         .AddElement('RESTRequest4Delphi', 'yes')
         .AddElement('DataSet-Serialize', 'yes')
         .AddElement('BCrypt', 'yes')))
-    .Xml;
+    .Xml(True);
 end;
 
 procedure TFrmSamples.btnExample2Click(Sender: TObject);

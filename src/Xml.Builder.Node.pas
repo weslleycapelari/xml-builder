@@ -21,7 +21,9 @@ type
     FNodes: TList<IXmlNode>;
     FElements: TDictionary<string, string>;
     FAttributes: TDictionary<string, string>;
-    function Build: string;
+    function SpaceLines(const AText: string; const ASpaces: Integer): string;
+    function GetSpaces(const ASpaces: Integer): string;
+    function Build(const APretty: Boolean = False; const ASpaces: Integer = 2): string;
     function AddAttribute(const AName, AValue: string): IXmlNode;
     function AddNode(const ANode: IXmlNode): IXmlNode;
     function AddElement(const AName: string): IXmlNode; overload;
@@ -39,10 +41,12 @@ implementation
 uses
 {$IF DEFINED(FPC)}
   SysUtils,
-  StrUtils;
+  StrUtils,
+  Classes;
 {$ELSE}
   System.SysUtils,
-  System.StrUtils;
+  System.StrUtils,
+  System.Classes;
 {$ENDIF}
 
 function TXmlNode.AddAttribute(const AName, AValue: string): IXmlNode;
@@ -68,10 +72,11 @@ begin
   Result := Self;
 end;
 
-function TXmlNode.Build: string;
+function TXmlNode.Build(const APretty: Boolean; const ASpaces: Integer): string;
 var
   LNode: IXmlNode;
   LPair: TPair<string, string>;
+  LContent: string;
 begin
   Result := '<' + FNodeName;
   if FAttributes.Count > 0 then
@@ -82,18 +87,26 @@ begin
     Result := Result + '/>';
     Exit;
   end;
-  Result := Result + '>';
-  for LPair in FElements do
-  begin
-    Result := Result + '<' + LPair.Key + IfThen(LPair.Value.IsEmpty, '/>', '>');
-    if not LPair.Value.IsEmpty then
+  Result := Result + '>' + IfThen(APretty, Char(10), EmptyStr);
+  LContent := '';
+  try
+    for LPair in FElements do
     begin
-      Result := Result + LPair.Value;
-      Result := Result + '</' + LPair.Key + '>';
+      LContent := LContent + '<' + LPair.Key + IfThen(LPair.Value.IsEmpty, '/>', '>');
+      if not LPair.Value.IsEmpty then
+      begin
+        LContent := LContent + LPair.Value;
+        LContent := LContent + '</' + LPair.Key + '>';
+      end;
+      LContent := LContent + IfThen(APretty, Char(10), EmptyStr);
     end;
+    for LNode in FNodes do
+      LContent := LContent + LNode.Build(APretty, ASpaces);
+  finally
+    if (APretty) and (ASpaces > 0) then
+      LContent := SpaceLines(LContent, ASpaces);
+    Result := Result + LContent;
   end;
-  for LNode in FNodes do
-    Result := Result + LNode.Build;
   Result := Result + '</' + FNodeName + '>';
 end;
 
@@ -113,9 +126,36 @@ begin
   inherited;
 end;
 
+function TXmlNode.GetSpaces(const ASpaces: Integer): string;
+var
+  I: Integer;
+begin
+  Result := '';
+  for I := 1 to ASpaces do
+    Result := Result + ' ';
+end;
+
 class function TXmlNode.New(const ANodeName: string): IXmlNode;
 begin
   Result := TXmlNode.Create(ANodeName);
+end;
+
+function TXmlNode.SpaceLines(const AText: string; const ASpaces: Integer): string;
+var
+  LSpaces: string;
+  LStringList: TStringList;
+  I: Int64;
+begin
+  LSpaces := GetSpaces(ASpaces);
+  LStringList := TStringList.Create;
+  try
+    LStringList.Text := AText;
+    for I := 0 to Pred(LStringList.Count) do
+      LStringList[I] := LSpaces + LStringList[I];
+    Result := LStringList.Text;
+  finally
+    LStringList.Free;
+  end;
 end;
 
 end.

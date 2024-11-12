@@ -25,12 +25,12 @@ type
     FVersion: string;
     FEncoding: string;
     FNode: IXmlNode;
-    function Xml: string;
-    function Build: string;
+    function Xml(const APretty: Boolean = False; const ASpaces: Integer = 2): string;
+    function Build(const APretty: Boolean = False; const ASpaces: Integer = 2): string;
     function Version(const AValue: string): IXmlBuilder;
     function Encoding(const AValue: string): IXmlBuilder;
     function AddNode(const ANode: IXmlNode): IXMlBuilder;
-    procedure SaveToFile(const APath: string);
+    procedure SaveToFile(const APath: string; const APretty: Boolean = False; const ASpaces: Integer = 2);
     constructor Create;
   public
     class function New: IXmlBuilder;
@@ -70,14 +70,14 @@ begin
   Result := Self;
 end;
 
-function TXmlBuilder.Build: string;
+function TXmlBuilder.Build(const APretty: Boolean; const ASpaces: Integer): string;
 begin
   Result := '<?xml';
   Result := Result + IfThen(FVersion.IsEmpty, EmptyStr, Chr(32) + 'version="' + FVersion + '"');
   Result := Result + IfThen(FEncoding.IsEmpty, EmptyStr, Chr(32) + 'encoding="' + FEncoding + '"');
-  Result := Result + '?>';
+  Result := Result + '?>' + IfThen(APretty, Char(10), EmptyStr);
   if Assigned(FNode) then
-    Result := Result + FNode.Build;
+    Result := Result + FNode.Build(APretty, ASpaces);
 end;
 
 constructor TXmlBuilder.Create;
@@ -97,13 +97,13 @@ begin
   Result := TXmlBuilder.Create;
 end;
 
-procedure TXmlBuilder.SaveToFile(const APath: string);
+procedure TXmlBuilder.SaveToFile(const APath: string; const APretty: Boolean; const ASpaces: Integer);
 var
   LStringList: TStringList;
 begin
   LStringList := TStringList.Create;
   try
-    LStringList.Text := Self.Build;
+    LStringList.Text := Self.Build(APretty, ASpaces);
     LStringList.SaveToFile(APath);
   finally
     LStringList.Free;
@@ -116,9 +116,9 @@ begin
   Result := Self;
 end;
 
-function TXmlBuilder.Xml: string;
+function TXmlBuilder.Xml(const APretty: Boolean; const ASpaces: Integer): string;
 begin
-  Result := Self.Build;
+  Result := Self.Build(APretty, ASpaces);
 end;
 
 end.

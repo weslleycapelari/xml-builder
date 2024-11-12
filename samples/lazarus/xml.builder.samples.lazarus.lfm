@@ -11,6 +11,11 @@ object FrmSamples: TFrmSamples
     Height = 377
     Top = 56
     Width = 649
+    Font.CharSet = ANSI_CHARSET
+    Font.Name = 'Consolas'
+    Font.Pitch = fpFixed
+    Font.Quality = fqDraft
+    ParentFont = False
     TabOrder = 0
   end
   object btnExample2: TButton
@@ -19,8 +24,8 @@ object FrmSamples: TFrmSamples
     Top = 16
     Width = 75
     Caption = 'Example 2'
-    OnClick = btnExample2Click
     TabOrder = 1
+    OnClick = btnExample2Click
   end
   object btnExample1: TButton
     Left = 24
@@ -28,8 +33,8 @@ object FrmSamples: TFrmSamples
     Top = 16
     Width = 75
     Caption = 'Example 1'
-    OnClick = btnExample1Click
     TabOrder = 2
+    OnClick = btnExample1Click
   end
   object btnExample3: TButton
     Left = 186
@@ -37,8 +42,8 @@ object FrmSamples: TFrmSamples
     Top = 16
     Width = 75
     Caption = 'Example 3'
-    OnClick = btnExample3Click
     TabOrder = 3
+    OnClick = btnExample3Click
   end
   object mtDeveloper: TMemDataset
     FieldDefs = <    
