@@ -9,47 +9,63 @@ interface
 uses
   Xml.Builder.Node.Intf,
 {$IF DEFINED(FPC)}
+  Classes,
   Generics.Collections;
 {$ELSE}
+  System.Classes,
   System.Generics.Collections;
 {$ENDIF}
 
 type
+
+  { TXmlNode }
+
   TXmlNode = class(TInterfacedObject, IXmlNode)
-  private
-    FNodeName: string;
-    FNodes: TList<IXmlNode>;
-    FElements: TDictionary<string, string>;
-    FAttributes: TDictionary<string, string>;
+  strict private 
     function SpaceLines(const AText: string; const ASpaces: Integer): string;
     function GetSpaces(const ASpaces: Integer): string;
+  private                        
+    FName: string;
+    FValue: string;
+    FNodes: IXmlNodeList;
+    FIsNode: Boolean;
+    FAttributes: TDictionary<string, string>;
+  protected
     function Build(const APretty: Boolean = False; const ASpaces: Integer = 2): string;
-    function AddAttribute(const AName, AValue: string): IXmlNode;
+    function Name: string;
     function AddNode(const ANode: IXmlNode): IXmlNode;
     function AddElement(const AName: string): IXmlNode; overload;
     function AddElement(const AName, AValue: string): IXmlNode; overload;
-    function NodeName: string;
-    constructor Create(const ANodeName: string); reintroduce;
-  public
-    class function Parse(const AText: string): IXmlNode;
-    class function New(const ANodeName: string): IXmlNode;
+    function AddAttribute(const AName, AValue: string): IXmlNode;
+    function FindByTagName(const AName: string; const ARecursive: Boolean = True): IXmlNodeList;
+    function Value(const APretty: Boolean = False; const ASpaces: Integer = 2): string; overload;
+    function Value(const AValue: string): IXmlNode; overload;
+  public                                         
+    constructor Create(const AName: string); reintroduce;
     destructor Destroy; override;
+    class function Parse(const AText: string): IXmlNode;
+    class function New(const AName: string): IXmlNode;
   end;
 
 implementation
 
-{ TXmlNode }
-
 uses
 {$IF DEFINED(FPC)}
-  SysUtils,
   StrUtils,
-  Classes;
+  SysUtils;
 {$ELSE}
-  System.SysUtils,
   System.StrUtils,
-  System.Classes;
+  System.SysUtils;
 {$ENDIF}
+
+{ TXmlNode }
+
+function TXmlNode.AddElement(const AName: string): IXmlNode;
+begin                       
+  FNodes.Add(TXmlNode.New(AName));
+  FIsNode := FNodes.Count > 0; 
+  Result := Self;
+end;
 
 function TXmlNode.AddAttribute(const AName, AValue: string): IXmlNode;
 begin
@@ -57,14 +73,10 @@ begin
   Result := Self;
 end;
 
-function TXmlNode.AddElement(const AName: string): IXmlNode;
-begin
-  Result := Self.AddElement(AName, EmptyStr);
-end;
-
 function TXmlNode.AddElement(const AName, AValue: string): IXmlNode;
 begin
-  FElements.AddOrSetValue(AName, AValue);
+  FNodes.Add(TXmlNode.New(AName).Value(AValue));
+  FIsNode := FNodes.Count > 0;
   Result := Self;
 end;
 
@@ -74,58 +86,23 @@ begin
   Result := Self;
 end;
 
-function TXmlNode.Build(const APretty: Boolean; const ASpaces: Integer): string;
+function TXmlNode.SpaceLines(const AText: string; const ASpaces: Integer
+  ): string;
 var
-  LNode: IXmlNode;
-  LPair: TPair<string, string>;
-  LContent: string;
+  LSpaces: string;
+  LStringList: TStringList;
+  I: Int64;
 begin
-  Result := '<' + FNodeName;
-  if FAttributes.Count > 0 then
-    for LPair in FAttributes do
-      Result := Result + Chr(32) + LPair.Key + '="' + LPair.Value + '"';
-  if (FNodes.Count = 0) and (FElements.Count = 0) then
-  begin
-    Result := Result + '/>';
-    Exit;
-  end;
-  Result := Result + '>' + IfThen(APretty, Char(10), EmptyStr);
-  LContent := '';
+  LSpaces := GetSpaces(ASpaces);
+  LStringList := TStringList.Create;
   try
-    for LPair in FElements do
-    begin
-      LContent := LContent + '<' + LPair.Key + IfThen(LPair.Value.IsEmpty, '/>', '>');
-      if not LPair.Value.IsEmpty then
-      begin
-        LContent := LContent + LPair.Value;
-        LContent := LContent + '</' + LPair.Key + '>';
-      end;
-      LContent := LContent + IfThen(APretty, Char(10), EmptyStr);
-    end;
-    for LNode in FNodes do
-      LContent := LContent + LNode.Build(APretty, ASpaces);
+    LStringList.Text := AText;
+    for I := 0 to Pred(LStringList.Count) do
+      LStringList[I] := LSpaces + LStringList[I];
+    Result := LStringList.Text;
   finally
-    if (APretty) and (ASpaces > 0) then
-      LContent := SpaceLines(LContent, ASpaces);
-    Result := Result + LContent;
+    LStringList.Free;
   end;
-  Result := Result + '</' + FNodeName + '>';
-end;
-
-constructor TXmlNode.Create(const ANodeName: string);
-begin
-  FNodes := TList<IXmlNode>.Create;
-  FElements := TDictionary<string, string>.Create();
-  FAttributes := TDictionary<string, string>.Create();
-  FNodeName := ANodeName;
-end;
-
-destructor TXmlNode.Destroy;
-begin
-  FNodes.Free;
-  FElements.Free;
-  FAttributes.Free;
-  inherited;
 end;
 
 function TXmlNode.GetSpaces(const ASpaces: Integer): string;
@@ -137,14 +114,61 @@ begin
     Result := Result + ' ';
 end;
 
-class function TXmlNode.New(const ANodeName: string): IXmlNode;
+constructor TXmlNode.Create(const AName: string);
 begin
-  Result := TXmlNode.Create(ANodeName);
+  FName := AName;
+  FValue := '';
+  FIsNode := False;
+  FAttributes := TDictionary<string, string>.Create;
+  FNodes := IXmlNodeList.Create;
 end;
 
-function TXmlNode.NodeName: string;
+function TXmlNode.Build(const APretty: Boolean; const ASpaces: Integer): string;
+var
+  LPair: TPair<string, string>;
+  LContent: string;
 begin
-  Result := FNodeName;
+  Result := '<' + FName;
+  if FAttributes.Count > 0 then
+    for LPair in FAttributes do
+      Result := Result + Chr(32) + LPair.Key + '="' + LPair.Value + '"';
+  LContent := Value(APretty, ASpaces);
+  if not LContent.IsEmpty then
+    Result := Result + '>' + LContent + '</' + FName + '>'
+  else
+    Result := Result + '/>';
+end;
+
+function TXmlNode.Name: string;
+begin
+  Result := FName;
+end;
+
+destructor TXmlNode.Destroy;
+begin
+  FNodes.Free;
+  inherited;
+end;
+
+function TXmlNode.FindByTagName(const AName: string; const ARecursive: Boolean
+  ): IXmlNodeList;
+var
+  LNode: IXmlNode;
+begin
+  Result := IXmlNodeList.Create;
+  for LNode in FNodes do
+  begin
+    if (LNode.Name.ToLower.Equals(AName.ToLower)) then
+      Result.Add(LNode);
+
+    if ARecursive then
+      Result.AddRange(LNode.FindByTagName(AName, ARecursive));
+  end;
+end;
+
+class function TXmlNode.New(const AName: string): IXmlNode;
+begin
+  Result := TXmlNode.Create(AName);
 end;
 
 class function TXmlNode.Parse(const AText: string): IXmlNode;
@@ -153,15 +177,12 @@ var
   LLevel: Int64;
   LStart: Int64;
   LLength: Int64;
-  LIsNode: Boolean;
   LTagName: string;
-  LContent: string;
   LOpenTag: string;
   LCloseTag: string;
   LAttrName: string;
   LAttrValue: string;
   LStartContent: Int64;
-  LStartElement: Int64;
 begin
   LStart := Pos('<', AText);
   if (LStart = 0) then Exit;
@@ -189,9 +210,7 @@ begin
     Result.AddAttribute(LAttrName, LAttrValue);
   end;
   if LTag.EndsWith('/>') then Exit;
-  LStartElement := 0;
   LStartContent := Pos(LTag, AText) + Length(LTag);
-  LIsNode := False;
   LLevel := 0;
   LStart := 1;
   LLength := 0;
@@ -200,51 +219,89 @@ begin
     LStart := Pos('<', AText, LStart + LLength);
     if LStart = 0 then Break;
     LLength := Pos('>', AText, LStart) - LStart + 1;
+    if LLength <= 0 then Break;
     LTag := Copy(AText, LStart, LLength);
-    if (LTag = LCloseTag) and (LLevel = 2) then
-    begin
-      if LIsNode then
-        Result.AddNode(TXmlNode.Parse(LOpenTag + Copy(AText, LStartElement, LStart - LStartElement).Trim + LCloseTag))
-      else
-        Result.AddElement(LTagName, Copy(AText, LStartElement, LStart - LStartElement));
-    end;
     if (LTag.Contains(' ')) then
       LLength := Pos(' ', LTag);
     LTagName := Copy(LTag, 2, LLength - 2);
-    if (LTag.EndsWith('/>')) then
-    begin
-      Result.AddElement(Copy(LTagName, 1, Length(LTagName) - 1));
-      Continue;
-    end;
-    LIsNode := LLevel > 2;
+    if (LTag.EndsWith('/>')) then Continue;
     if LLevel = 1 then
     begin
       LOpenTag := LTag;
       LCloseTag := '</' + LTagName + '>';
     end;
     if (LTag.StartsWith('</')) then Dec(LLevel) else Inc(LLevel);
-    if (LTag.StartsWith('</' + Result.NodeName)) and (LLevel = 0) then Break;
-    if (LLevel = 2) and (not LIsNode) then LStartElement := LStart + Length(LTag);
+    if (LTag.StartsWith('</' + Result.Name)) and (LLevel = 0) then Break;
   end;
-  LContent := Copy(AText, LStartContent, LStart - LStartContent);
+  Result.Value(Trim(Copy(AText, LStartContent, LStart - LStartContent)));
 end;
 
-function TXmlNode.SpaceLines(const AText: string; const ASpaces: Integer): string;
+function TXmlNode.Value(const AValue: string): IXmlNode;
 var
-  LSpaces: string;
-  LStringList: TStringList;
-  I: Int64;
+  LTag: string;
+  LLevel: Int64;
+  LStart: Int64;
+  LLength: Int64;
+  LIsNode: Boolean;
+  LTagName: string;
+  LOpenTag: string;
+  LCloseTag: string;
+  LStartElement: Int64;
 begin
-  LSpaces := GetSpaces(ASpaces);
-  LStringList := TStringList.Create;
-  try
-    LStringList.Text := AText;
-    for I := 0 to Pred(LStringList.Count) do
-      LStringList[I] := LSpaces + LStringList[I];
-    Result := LStringList.Text;
-  finally
-    LStringList.Free;
+  Result := Self;
+  LStartElement := 0;
+  LIsNode := False;
+  LLevel := 0;
+  LStart := 1;
+  LLength := 0;
+  LCloseTag := '';
+  LOpenTag := '';
+  LTagName := '';
+  while LStart > 0 do
+  begin
+    LStart := Pos('<', AValue, LStart + LLength);
+    if LStart = 0 then Break;
+    LLength := Pos('>', AValue, LStart) - LStart + 1;
+    if LLength <= 0 then Break;
+    LTag := Copy(AValue, LStart, LLength);
+    if (LTag = LCloseTag) and (LLevel = 1) then
+    begin
+      if LIsNode then
+        AddNode(TXmlNode.Parse(LOpenTag + Copy(AValue, LStartElement, LStart - LStartElement) + LCloseTag))
+      else
+        AddElement(LTagName, Copy(AValue, LStartElement, LStart - LStartElement));
+    end;
+    if (LTag.Contains(' ')) then
+      LLength := Pos(' ', LTag);
+    LTagName := Copy(LTag, 2, LLength - 2);
+    if (LTag.EndsWith('/>')) then
+    begin
+      AddElement(Copy(LTagName, 1, Length(LTagName) - 1));
+      Continue;
+    end;
+    LIsNode := LLevel > 1;
+    if LLevel = 0 then
+    begin
+      LOpenTag := LTag;
+      LCloseTag := '</' + LTagName + '>';
+    end;
+    if (LTag.StartsWith('</')) then Dec(LLevel) else Inc(LLevel);
+    if (LTag.StartsWith('</' + Name)) and (LLevel = -1) then Break;
+    if (LLevel = 1) and (not LIsNode) then LStartElement := LStart + Length(LTag);
   end;
+  FIsNode := FNodes.Count > 0;
+  if FIsNode then FValue := '' else FValue := AValue;
+end;
+
+function TXmlNode.Value(const APretty: Boolean; const ASpaces: Integer): string;
+var
+  LElement: IXmlNode;
+begin
+  if (not FIsNode) then Exit(FValue);
+  Result := IfThen(APretty, Char(10), EmptyStr);
+  for LElement in FNodes do
+    Result := Result + LElement.Build(APretty, ASpaces) + IfThen(APretty, Char(10), EmptyStr);
+  if APretty then Result := SpaceLines(Result, ASpaces);
 end;
 
 end.

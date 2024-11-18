@@ -4,7 +4,8 @@ interface
 
 uses Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, VCL.Graphics, VCL.Controls, VCL.Forms,
   VCL.Dialogs, VCL.ExtCtrls, Vcl.StdCtrls, FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param, FireDAC.Stan.Error,
-  FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client;
+  FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
+  System.Generics.Collections;
 
 type
   TFrmSamples = class(TForm)
@@ -18,10 +19,12 @@ type
     mtDeveloperlastName: TStringField;
     mtDevelopermvp: TBooleanField;
     btnExample4: TButton;
+    btnExample5: TButton;
     procedure btnExample1Click(Sender: TObject);
     procedure btnExample2Click(Sender: TObject);
     procedure btnExample3Click(Sender: TObject);
     procedure btnExample4Click(Sender: TObject);
+    procedure btnExample5Click(Sender: TObject);
   end;
 
 var
@@ -104,7 +107,38 @@ begin
     '  </projects>' + #10 +
     '</developer>';
 
-  mmXml.Lines.Text := TXmlBuilder.Parse(mmXml.Lines.Text).Xml;
+  mmXml.Lines.Text := TXmlBuilder.Parse(mmXml.Lines.Text).Xml(True);
+end;
+
+procedure TFrmSamples.btnExample5Click(Sender: TObject);
+var
+  LXML: IXmlBuilder;
+  LFound: IXmlNodeList;
+  LCount: Integer;
+begin
+  mmXml.Lines.Text := '';
+  LXML := TXmlBuilder.Parse(
+    '<?xml version="1.0" encoding="UTF-8"?>' + #10 +
+    '<developer mvp="true">' + #10 +
+    '  <firstName>Vinicius</firstName>' + #10 +
+    '  <lastName>Sanchez</lastName>' + #10 +
+    '  <BCrypt>teste</BCrypt>' + #10 +
+    '  <age/>' + #10 +
+    '  <projects>' + #10 +
+    '    <Boss>yes</Boss>' + #10 +
+    '    <DataSet-Serialize>yes</DataSet-Serialize>' + #10 +
+    '    <RESTRequest4Delphi>yes</RESTRequest4Delphi>' + #10 +
+    '    <BCrypt>yes</BCrypt>' + #10 +
+    '    <Horse>yes</Horse>' + #10 +
+    '  </projects>' + #10 +
+    '</developer>');
+  LFound := LXML.FindByTagName('BCrypt');
+  if (LFound.Count = 0) then Exit;
+  for LCount := 0 to LFound.Count - 1 do
+  begin
+    mmXml.Lines.Add('Match ' + IntToStr(LCount) + ':');
+    mmXml.Lines.Add(LFound[LCount].Build(True) + Char(32));
+  end;
 end;
 
 end.
