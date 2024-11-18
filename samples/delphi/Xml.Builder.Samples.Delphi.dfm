@@ -81,6 +81,15 @@ object FrmSamples: TFrmSamples
       TabOrder = 5
       OnClick = btnExample5Click
     end
+    object btnExample6: TButton
+      Left = 429
+      Top = 16
+      Width = 75
+      Height = 25
+      Caption = 'Example 6'
+      TabOrder = 6
+      OnClick = btnExample6Click
+    end
   end
   object mtDeveloper: TFDMemTable
     FetchOptions.AssignedValues = [evMode]

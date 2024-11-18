@@ -36,6 +36,7 @@ type
     function Encoding(const AValue: string): IXmlBuilder;
     function AddNode(const ANode: IXmlNode): IXMlBuilder;
     procedure SaveToFile(const APath: string; const APretty: Boolean = False; const ASpaces: Integer = 2);
+    function XPath(const APath: string; const ARecursive: Boolean = True): IXmlNodeList;
   public                        
     constructor Create;
     destructor Destroy; override;
@@ -177,6 +178,91 @@ end;
 function TXmlBuilder.Xml(const APretty: Boolean; const ASpaces: Integer): string;
 begin
   Result := Self.Build(APretty, ASpaces);
+end;
+
+function TXmlBuilder.XPath(const APath: string;
+  const ARecursive: Boolean): IXmlNodeList;
+var
+  LNode: IXmlNode;
+  LRule: string;
+  LPath: string;
+  LList: IXmlNodeList;
+  LCount: Int64;
+  LStart: Int64;
+  LLength: Int64;
+  LTagName: string;
+  LAttrRule: string;
+  LAttrValue: string;
+  LAttrStart: Int64;
+begin
+  Result := IXmlNodeList.Create;
+  LStart := Pos('/', APath);
+  if LStart = 0 then Exit;
+  Inc(LStart);
+  LLength := Pos('/', APath, LStart);
+  if (LLength = 2) then
+  begin
+    Inc(LStart);
+    LLength := Pos('/', APath, LStart);
+  end;
+  if (LLength <= 0) then LLength := Length(APath) + 1;
+  LLength := LLength - LStart;
+  LRule := Copy(APath, LStart, LLength);
+  LPath := Copy(APath, LStart + LLength);
+  LStart := Pos('[', LRule);
+  if LStart = 0 then
+    LTagName := Copy(LRule, 1)
+  else
+    LTagName := Copy(LRule, 1, LStart - 1);
+
+  for LNode in FNodes do
+  begin
+    if (LTagName.Equals('*')) or (LNode.Name.ToLower.Equals(LTagName.ToLower)) then
+      Result.Add(LNode);
+  end;
+
+  try
+    if LStart = 0 then Exit;
+
+    LStart := 1;
+    while LStart > 0 do
+    begin
+      LStart := Pos('[@', LRule, LStart);
+      if LStart = 0 then Exit;
+      Inc(LStart, 2);
+      LLength := Pos(']', LRule, LStart) - LStart;
+      LAttrRule := Copy(LRule, LStart, LLength);
+      LAttrStart := Pos('=', LAttrRule);
+      if LAttrStart = 0 then
+      begin
+        for LCount := Result.Count - 1 downto 0 do
+          if (not Result.Items[LCount].HasAttribute(LAttrRule)) then Result.Delete(LCount);
+        Continue;
+      end;
+      Inc(LAttrStart, 1);
+      LAttrValue := Copy(LAttrRule, LAttrStart);
+      if LAttrValue.StartsWith('''') or LAttrValue.StartsWith('"') then LAttrValue := Copy(LAttrValue, 2);
+      if LAttrValue.EndsWith('''') or LAttrValue.EndsWith('"') then LAttrValue := Copy(LAttrValue, 1, Length(LAttrValue) - 1);
+      LAttrRule := Copy(LAttrRule, 1, LAttrStart - 2);
+      for LCount := Result.Count - 1 downto 0 do
+        if (not Result.Items[LCount].HasAttribute(LAttrRule)) or
+          (not Result.Items[LCount].Attribute(LAttrRule).ToLower.Equals(LAttrValue.ToLower)) then
+          Result.Delete(LCount);
+    end;
+
+  finally
+    LList := IXmlNodeList.Create;
+    if (ARecursive) and (not LPath.IsEmpty) then
+    begin
+      for LCount := Result.Count - 1 downto 0 do
+      begin
+        if ARecursive then
+          LList.AddRange(LNode.XPath(LPath, ARecursive));
+        Result.Delete(LCount);
+      end;
+    end;
+    Result.AddRange(LList);
+  end;
 end;
 
 end.

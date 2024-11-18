@@ -14,6 +14,7 @@ type
     function AddNode(const ANode: IXmlNode): IXMlBuilder;
     procedure SaveToFile(const APath: string; const APretty: Boolean = False; const ASpaces: Integer = 2);
     function FindByTagName(const AName: string; const ARecursive: Boolean = True): IXmlNodeList;
+    function XPath(const APath: string; const ARecursive: Boolean = True): IXmlNodeList;
   end;
 
 implementation
