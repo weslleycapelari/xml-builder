@@ -21,6 +21,7 @@ type
     btnExample4: TButton;
     btnExample5: TButton;
     btnExample6: TButton;
+    pnlButtons: TPanel;
     procedure btnExample1Click(Sender: TObject);
     procedure btnExample2Click(Sender: TObject);
     procedure btnExample3Click(Sender: TObject);

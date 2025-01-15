@@ -66,7 +66,7 @@ uses
 function TXmlNode.AddElement(const AName: string): IXmlNode;
 begin                       
   FNodes.Add(TXmlNode.New(AName));
-  FIsNode := FNodes.Count > 0; 
+  FIsNode := FNodes.Count > 0;
   Result := Self;
 end;
 
@@ -86,6 +86,7 @@ end;
 function TXmlNode.AddNode(const ANode: IXmlNode): IXmlNode;
 begin
   FNodes.Add(ANode);
+  FIsNode := FNodes.Count > 0;
   Result := Self;
 end;
 
@@ -273,7 +274,6 @@ var
 begin
   Result := Self;
   LStartElement := 0;
-  LIsNode := False;
   LLevel := 0;
   LStart := 1;
   LLength := 0;
